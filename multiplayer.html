@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Space Racer Deluxe</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      background: radial-gradient(#000, #111);
+      background-image: url('galaxy.jpg');
+      color: #9893d7;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 10px 0;
+      font-size: 2em;
+      color: #0ff;
+      text-shadow: 0 0 10px #0ff;
+    }
+
+    #controls {
+      margin-bottom: 10px;
+    }
+
+    button {
+      padding: 8px 16px;
+      margin: 5px;
+      font-size: 1em;
+      border: none;
+      border-radius: 5px;
+      background: linear-gradient(135deg, #010c0c, #6f00ff);
+      color: #fff;
+      cursor: pointer;
+    }
+
+    #scoreBoard {
+      font-size: 1.2em;
+      margin: 10px;
+      
+    }
+
+    #gameCanvas {
+      background: #0e0000;
+      background-image: url('galaxy.jpg');
+      display: block;
+      margin: 0 auto;
+      border: 4px solid rgb(0, 9, 9);
+    }
+
+    #gameOver {
+      font-size: 2em;
+      color: red;
+      display: none;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🚀 Space Racer Deluxe</h1>
+  <div id="controls">
+    <button onclick="restartGame()">🔁 Restart</button>
+    <button onclick="exitGame()">❌ Exit</button>
+  </div>
+  <div id="scoreBoard">Score: <span id="score">0</span></div>
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+  <div id="gameOver">💥 Mission Failed! Refresh or restart to play again.</div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const ctx = canvas.getContext("2d");
+
+    const spaceshipImg = new Image();
+    spaceshipImg.src = "spaceship.jpeg";
+
+    const asteroidImg = new Image();
+    asteroidImg.src = "asteroid.jpeg";
+
+    const laserImg = new Image();
+    laserImg.src = "laser.png";
+
+    let lanes = [40, 120, 200, 280];
+    let spaceship = {
+      x: lanes[1],
+      y: canvas.height - 100,
+      width: 50,
+      height: 80,
+      boosting: false,
+      boostHeight: 0
+    };
+
+    let enemies = [];
+    let lasers = [];
+    let ropeSegments = Array.from({ length: 20 }, (_, i) => ({
+      x: canvas.width / 2 - 2,
+      y: i * 30,
+      width: 4,
+      height: 20,
+      speed: 2
+    }));
+
+    let score = 0;
+    let gameOver = false;
+    let baseSpeed = 2;
+    let speedBoost = 0;
+
+    function drawRope() {
+      ctx.fillStyle = "#0ff";
+      for (let segment of ropeSegments) {
+        ctx.fillRect(segment.x, segment.y, segment.width, segment.height);
+        segment.y += segment.speed;
+        if (segment.y > canvas.height) {
+          segment.y = -segment.height;
+        }
+      }
+    }
+
+    function createEnemy() {
+      const lane = lanes[Math.floor(Math.random() * lanes.length)];
+      enemies.push({
+        x: lane,
+        y: -100,
+        width: 50,
+        height: 80,
+        speed: baseSpeed + speedBoost + Math.random()
+      });
+    }
+
+    function drawSpaceship(obj) {
+      let yOffset = obj.boosting ? obj.y - obj.boostHeight : obj.y;
+      if (spaceshipImg.complete && spaceshipImg.naturalWidth > 0) {
+        ctx.drawImage(spaceshipImg, obj.x, yOffset, obj.width, obj.height);
+      } else {
+        ctx.fillStyle = "#0ff";
+        ctx.fillRect(obj.x, yOffset, obj.width, obj.height);
+      }
+    }
+
+    function drawAsteroid(obj) {
+      if (asteroidImg.complete && asteroidImg.naturalWidth > 0) {
+        ctx.drawImage(asteroidImg, obj.x, obj.y, obj.width, obj.height);
+      } else {
+        ctx.fillStyle = "#888";
+        ctx.beginPath();
+        ctx.arc(obj.x + obj.width / 2, obj.y + obj.height / 2, obj.width / 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawLaser(obj) {
+      if (laserImg.complete && laserImg.naturalWidth > 0) {
+        ctx.drawImage(laserImg, obj.x, obj.y, obj.width, obj.height);
+      } else {
+        ctx.fillStyle = "red";
+        ctx.fillRect(obj.x, obj.y, obj.width, obj.height);
+      }
+    }
+
+    function blastAsteroid() {
+      if (enemies.length === 0) return;
+      const target = enemies[0];
+      const blastX = target.x + target.width / 2;
+      const blastY = target.y + target.height / 2;
+      let radius = 0;
+
+       function animateBlast() {
+         ctx.beginPath();
+         ctx.arc(blastX, blastY, radius, 0, Math.PI * 2);
+         ctx.fillStyle = "rgba(255, 0, 0, 0)";
+         ctx.fill();
+           radius += 5;
+           if (radius < 40) {
+           requestAnimationFrame(animateBlast);
+           }
+         }
+
+      animateBlast();
+      enemies.splice(0, 1);
+      score += 10;
+      document.getElementById("score").textContent = score;
+    }
+
+    function update() {
+      if (gameOver) return;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+     // drawRope();
+
+      for (let i = lasers.length - 1; i >= 0; i--) {
+        const laser = lasers[i];
+        laser.y -= laser.speed;
+        drawLaser(laser);
+        if (laser.y < -laser.height) lasers.splice(i, 1);
+      }
+
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        const enemy = enemies[i];
+        enemy.y += enemy.speed;
+
+        if (!spaceship.boosting &&
+            spaceship.x < enemy.x + enemy.width &&
+            spaceship.x + spaceship.width > enemy.x &&
+            spaceship.y < enemy.y + enemy.height &&
+            spaceship.y + spaceship.height > enemy.y) {
+          document.getElementById("gameOver").style.display = "block";
+          gameOver = true;
+          return;
+        }
+
+        for (let j = lasers.length - 1; j >= 0; j--) {
+          const laser = lasers[j];
+          if (
+            laser.x < enemy.x + enemy.width &&
+            laser.x + laser.width > enemy.x &&
+            laser.y < enemy.y + enemy.height &&
+            laser.y + laser.height > enemy.y
+          ) {
+            enemies.splice(i, 1);
+            lasers.splice(j, 1);
+            score += 2;
+            speedBoost += 0.05;
+            document.getElementById("score").textContent = score;
+            break;
+          }
+        }
+
+        if (enemy.y > canvas.height) {
+          enemies.splice(i, 1);
+          score++;
+          speedBoost += 0.05;
+          document.getElementById("score").textContent = score;
+        } else {
+          drawAsteroid(enemy);
+        }
+      }
+
+      if (spaceship.boosting) {
+        spaceship.boostHeight += 5;
+        if (spaceship.boostHeight >= 100) {
+          spaceship.boosting = false;
+          spaceship.boostHeight = 0;
+        }
+      }
+
+      drawSpaceship(spaceship);
+
+      if (Math.random() < 0.02 + speedBoost * 0.01) {
+        createEnemy();
+      }
+
+      requestAnimationFrame(update);
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (gameOver) return;
+      const currentLane = lanes.indexOf(spaceship.x);
+      if (e.key === "ArrowLeft" && currentLane > 0) {
+        spaceship.x = lanes[currentLane - 1];
+      }
+      if (e.key === "ArrowRight" && currentLane < lanes.length - 1) {
+        spaceship.x = lanes[currentLane + 1];
+      }
+      if (e.key === " " && !spaceship.boosting) {
+        spaceship.boosting = true;
+        spaceship.boostHeight = 0;
+      }
+      if (e.key.toLowerCase() === "f") {
+        lasers.push({
+          x: spaceship.x + spaceship.width / 2 - 5,
+          y: spaceship.y,
+          width: 10,
+          height: 20,
+          speed: 7
+        });
+      }
+    });
+    function restartGame() {
+      score = 0;
+      speedBoost = 0;
+      enemies = [];
+      lasers = [];
+      spaceship.x = lanes[1];
+      spaceship.boosting = false;
+      spaceship.boostHeight = 0;
+      gameOver = false;
+      document.getElementById("score").textContent = score;
+      document.getElementById("gameOver").style.display = "none";
+      update();
+    }
+    function exitGame() {
+      window.location.href = "index.html";
+    }
+    update();
+  </script>
+  </body>

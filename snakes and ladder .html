@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Snakes and Ladders Deluxe</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      text-align: center;
+      background: #e6f7ff;
+    }
+
+    h1 {
+      margin-top: 20px;
+    }
+
+    #board {
+      display: grid;
+      grid-template-columns: repeat(10, 50px);
+      grid-template-rows: repeat(10, 50px);
+      gap: 2px;
+      margin: 20px auto;
+      width: 520px;
+      border: 2px solid #333;
+    }
+
+    #board div {
+      background-color: #fff;
+      border: 1px solid #ccc;
+      position: relative;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .snake {
+      background-image: url('https://em-content.zobj.net/thumbs/240/apple/354/snake_1f40d.png');
+      background-size: cover;
+    }
+
+    .ladder {
+      background-image: url('https://em-content.zobj.net/thumbs/240/apple/354/ladder_1fa9c.png');
+      background-size: cover;
+    }
+
+    .snake-big {
+      background-image: url('https://em-content.zobj.net/thumbs/240/apple/354/snake_1f40d.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      transform: scale(1.5);
+      z-index: 0;
+    }
+
+    .ladder-big {
+      background-image: url('https://em-content.zobj.net/thumbs/240/apple/354/ladder_1fa9c.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      transform: scale(1.5);
+      z-index: 0;
+    }
+
+    .pin {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      position: absolute;
+      bottom: 2px;
+    }
+
+    .pin.player1 {
+      background-color: #ffcc00;
+      left: 2px;
+    }
+
+    .pin.player2 {
+      background-color: #66ff66;
+      left: 22px;
+    }
+
+    #controls {
+      margin-top: 20px;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    #diceResult, #playerStatus {
+      margin-top: 10px;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎲 Snakes & Ladders Deluxe</h1>
+  <div id="board"></div>
+  <div id="controls">
+    <button onclick="rollDice()">Roll Dice 🎲</button>
+    <p id="diceResult">Dice: -</p>
+    <p id="playerStatus">Player 1's turn</p>
+  </div>
+
+  <script>
+    const board = document.getElementById("board");
+    const diceResult = document.getElementById("diceResult");
+    const playerStatus = document.getElementById("playerStatus");
+
+    let player1Pos = 1;
+    let player2Pos = 1;
+    let currentPlayer = 1;
+
+    const snakes = {
+      16: 6,
+      48: 26,
+      62: 19,
+      64: 60,
+      93: 68,
+      95: 24,
+      98: 78
+    };
+
+    const ladders = {
+      2: 38,
+      7: 14,
+      8: 31,
+      15: 26,
+      21: 42,
+      28: 84,
+      36: 44,
+      51: 67,
+      71: 91,
+      78: 98,
+      87: 94
+    };
+
+    const bigSnakes = [64, 98];
+    const bigLadders = [2, 28];
+
+    // Create board cells
+    for (let i = 100; i >= 1; i--) {
+      const cell = document.createElement("div");
+      cell.id = `cell-${i}`;
+      cell.textContent = i;
+
+      if (snakes[i]) {
+        cell.classList.add(bigSnakes.includes(i) ? "snake-big" : "snake");
+      }
+
+      if (ladders[i]) {
+        cell.classList.add(bigLadders.includes(i) ? "ladder-big" : "ladder");
+      }
+
+      board.appendChild(cell);
+    }
+
+    function rollDice() {
+      diceResult.textContent = "Rolling...";
+      setTimeout(() => {
+        const roll = Math.floor(Math.random() * 6) + 1;
+        diceResult.textContent = `Dice: ${roll}`;
+        if (currentPlayer === 1) {
+          movePlayer(1, roll);
+        } else {
+          movePlayer(2, roll);
+        }
+      }, 500);
+    }
+
+    function movePlayer(player, roll) {
+      let pos = player === 1 ? player1Pos : player2Pos;
+      let newPos = pos + roll;
+      if (newPos > 100) newPos = pos;
+
+      if (snakes[newPos]) newPos = snakes[newPos];
+      else if (ladders[newPos]) newPos = ladders[newPos];
+
+      const oldCell = document.getElementById(`cell-${pos}`);
+      const oldPin = oldCell.querySelector(`.pin.player${player}`);
+      if (oldPin) oldPin.remove();
+
+      const newCell = document.getElementById(`cell-${newPos}`);
+      const pin = document.createElement("div");
+      pin.classList.add("pin", `player${player}`);
+      newCell.appendChild(pin);
+
+      if (player === 1) player1Pos = newPos;
+      else player2Pos = newPos;
+
+      if (newPos === 100) {
+        alert(`🎉 Player ${player} wins!`);
+        resetGame();
+        return;
+      }
+
+      currentPlayer = currentPlayer === 1 ? 2 : 1;
+      playerStatus.textContent = `Player ${currentPlayer}'s turn`;
+    }
+
+    function resetGame() {
+      document.querySelectorAll(".pin").forEach(pin => pin.remove());
+      player1Pos = 1;
+      player2Pos = 1;
+      currentPlayer = 1;
+
+      const startCell = document.getElementById("cell-1");
+      const pin1 = document.createElement("div");
+      pin1.classList.add("pin", "player1");
+      startCell.appendChild(pin1);
+
+      const pin2 = document.createElement("div");
+      pin2.classList.add("pin", "player2");
+      startCell.appendChild(pin2);
+
+      playerStatus.textContent = `Player 1's turn`;
+    }
+
+    // Initial pins
+    const startCell = document.getElementById("cell-1");
+    const pin1 = document.createElement("div");
+    pin1.classList.add("pin", "player1");
+    startCell.appendChild(pin1);
+
+    const pin2 = document.createElement("div");
+    pin2.classList.add("pin", "player2");
+    startCell.appendChild(pin2);
+  </script>
+</body>
+</html>
